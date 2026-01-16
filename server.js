@@ -12,8 +12,21 @@ dotenv.config();
 
 const app = express();
 
-// Middlewares
-app.use(cors());
+/* =========================
+   FIXED CORS (CRITICAL)
+========================= */
+app.use(
+  cors({
+    origin: [
+      "http://localhost:5173",
+      "https://travel-frontend-4xsb.vercel.app"
+    ],
+    methods: ["GET", "POST", "PUT", "DELETE"],
+    allowedHeaders: ["Content-Type", "Authorization"],
+    credentials: false
+  })
+);
+
 app.use(express.json());
 
 // 🔗 Connect MongoDB
@@ -25,7 +38,7 @@ const groq = new Groq({
 });
 
 /* =========================
-   HEALTH CHECK (IMPORTANT)
+   HEALTH CHECK
 ========================= */
 app.get("/", (req, res) => {
   res.send("Backend running");
@@ -55,11 +68,8 @@ Plain text only. Day-wise bullet points.
       temperature: 0.7
     });
 
-    const text = completion.choices[0].message.content;
-
-    res.json({ itinerary: text });
+    res.json({ itinerary: completion.choices[0].message.content });
   } catch (error) {
-    console.error("Groq error:", error);
     res.status(500).json({ error: "AI generation failed" });
   }
 });
@@ -68,62 +78,47 @@ Plain text only. Day-wise bullet points.
    SAVE TRIP (PROTECTED)
 ========================= */
 app.post("/api/saveTrip", protect, async (req, res) => {
-  try {
-    const { destination, days, interest, plan } = req.body;
+  const { destination, days, interest, plan } = req.body;
 
-    const trip = await Trip.create({
-      user: req.userId,
-      destination,
-      days,
-      interest,
-      plan
-    });
+  const trip = await Trip.create({
+    user: req.userId,
+    destination,
+    days,
+    interest,
+    plan
+  });
 
-    res.json({ message: "Trip saved successfully", trip });
-  } catch (error) {
-    console.error(error);
-    res.status(500).json({ error: "Could not save trip" });
-  }
+  res.json({ message: "Trip saved successfully", trip });
 });
 
 /* =========================
    GET USER TRIPS (PROTECTED)
 ========================= */
 app.get("/api/myTrips", protect, async (req, res) => {
-  try {
-    const trips = await Trip.find({ user: req.userId }).sort({ createdAt: -1 });
-    res.json(trips);
-  } catch (error) {
-    res.status(500).json({ error: "Could not fetch trips" });
-  }
+  const trips = await Trip.find({ user: req.userId }).sort({ createdAt: -1 });
+  res.json(trips);
 });
 
 /* =========================
    DELETE TRIP (PROTECTED)
 ========================= */
 app.delete("/api/trip/:id", protect, async (req, res) => {
-  try {
-    const deletedTrip = await Trip.findOneAndDelete({
-      _id: req.params.id,
-      user: req.userId
-    });
+  const deletedTrip = await Trip.findOneAndDelete({
+    _id: req.params.id,
+    user: req.userId
+  });
 
-    if (!deletedTrip) {
-      return res.status(404).json({ error: "Trip not found" });
-    }
-
-    res.json({ message: "Trip deleted successfully" });
-  } catch (error) {
-    console.error(error);
-    res.status(500).json({ error: "Could not delete trip" });
+  if (!deletedTrip) {
+    return res.status(404).json({ error: "Trip not found" });
   }
+
+  res.json({ message: "Trip deleted successfully" });
 });
 
 /* =========================
-   SERVER START
+   START SERVER
 ========================= */
 const PORT = process.env.PORT || 5000;
-
 app.listen(PORT, () => {
   console.log(`Backend running on port ${PORT}`);
 });
