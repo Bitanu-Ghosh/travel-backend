@@ -13,7 +13,7 @@ dotenv.config();
 const app = express();
 
 /* =========================
-   ✅ EXPRESS 5 SAFE CORS
+   ✅ FINAL CORS (JWT SAFE)
 ========================= */
 app.use(
   cors({
@@ -29,9 +29,9 @@ app.use(
 
       return callback(new Error("CORS blocked"), false);
     },
-    allowedHeaders: ["Content-Type", "Authorization"],
     methods: ["GET", "POST", "PUT", "DELETE"],
-    credentials: true
+    allowedHeaders: ["Content-Type", "Authorization"]
+    // ❌ credentials REMOVED
   })
 );
 
