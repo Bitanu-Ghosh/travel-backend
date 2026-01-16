@@ -13,26 +13,34 @@ dotenv.config();
 const app = express();
 
 /* =========================
-   FIXED CORS (CRITICAL)
+   ✅ EXPRESS 5 SAFE CORS
 ========================= */
 app.use(
   cors({
-    origin: [
-      "http://localhost:5173",
-      "https://travel-frontend-4xsb.vercel.app"
-    ],
-    methods: ["GET", "POST", "PUT", "DELETE"],
+    origin: (origin, callback) => {
+      if (!origin) return callback(null, true);
+
+      if (
+        origin.startsWith("http://localhost:") ||
+        origin.endsWith(".vercel.app")
+      ) {
+        return callback(null, true);
+      }
+
+      return callback(new Error("CORS blocked"), false);
+    },
     allowedHeaders: ["Content-Type", "Authorization"],
-    credentials: false
+    methods: ["GET", "POST", "PUT", "DELETE"],
+    credentials: true
   })
 );
 
 app.use(express.json());
 
-// 🔗 Connect MongoDB
+// 🔗 MongoDB
 connectDB();
 
-// 🤖 Groq setup
+// 🤖 Groq
 const groq = new Groq({
   apiKey: process.env.GROQ_API_KEY
 });
@@ -50,7 +58,7 @@ app.get("/", (req, res) => {
 app.use("/api/auth", authRoutes);
 
 /* =========================
-   AI ITINERARY (PUBLIC)
+   AI ITINERARY
 ========================= */
 app.post("/api/itinerary", async (req, res) => {
   try {
@@ -69,7 +77,7 @@ Plain text only. Day-wise bullet points.
     });
 
     res.json({ itinerary: completion.choices[0].message.content });
-  } catch (error) {
+  } catch {
     res.status(500).json({ error: "AI generation failed" });
   }
 });
@@ -92,7 +100,7 @@ app.post("/api/saveTrip", protect, async (req, res) => {
 });
 
 /* =========================
-   GET USER TRIPS (PROTECTED)
+   GET TRIPS (PROTECTED)
 ========================= */
 app.get("/api/myTrips", protect, async (req, res) => {
   const trips = await Trip.find({ user: req.userId }).sort({ createdAt: -1 });
